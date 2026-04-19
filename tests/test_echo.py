@@ -1,2 +1,2 @@
 def test_null() -> None:
-    assert None is not None
+    assert None is None

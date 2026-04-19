@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <title>座標登録</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="container py-4">
+    <h1>📍 座標登録</h1>
+    <p class="text-muted">
+        manual はフォーム入力で保存します。click は送信後にこの端末上で 3 点（左上→右下→次ページボタン）を順にクリックします。
+    </p>
+
+    {% if message %}
+    <div class="alert alert-{{ message_kind }}">{{ message }}</div>
+    {% endif %}
+
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label">座標設定名</label>
+            <input type="text" name="name" class="form-control" value="default">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">登録方式</label>
+            <select name="capture_mode" class="form-select">
+                <option value="manual" selected>manual</option>
+                <option value="click">click</option>
+            </select>
+            <div class="form-text">click は pshots を起動している同じマシン上で実行してください。</div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">左上 X</label>
+                <input type="number" name="left_top_x" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">左上 Y</label>
+                <input type="number" name="left_top_y" class="form-control" value="0">
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">右下 X</label>
+                <input type="number" name="right_bottom_x" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">右下 Y</label>
+                <input type="number" name="right_bottom_y" class="form-control" value="0">
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">次ページ X</label>
+                <input type="number" name="next_x" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">次ページ Y</label>
+                <input type="number" name="next_y" class="form-control" value="0">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">click 時の待機秒数</label>
+            <input type="number" name="timeout" class="form-control" value="20" min="1" step="0.5">
+        </div>
+
+        <button type="submit" class="btn btn-primary">保存する</button>
+    </form>
+
+    <hr>
+    <h2 class="h5">現在の設定</h2>
+    {% if coord_names %}
+    <ul>
+        {% for name in coord_names %}
+        <li>
+            {{ name }}
+            {% if name == coord_default %}
+            <strong>(default)</strong>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">まだ座標設定はありません。</p>
+    {% endif %}
+
+    <a href="{{ url_for('web.index') }}">トップに戻る</a>
+</body>
+
+</html>

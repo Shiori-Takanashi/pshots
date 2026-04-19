@@ -19,7 +19,12 @@ from flask.typing import ResponseReturnValue
 
 from pshots.config.paths import cwd
 from pshots.config.state import jobs
-from pshots.services.coords import COORD_JSON_PATH, load_coord_store
+from pshots.services.coord_capture import PynputClickBackend
+from pshots.services.coords import (
+    COORD_JSON_PATH,
+    load_coord_store,
+    save_coord_profile,
+)
 from pshots.services.tasks import capture_screenshots, convert_to_pdf
 
 
@@ -30,6 +35,80 @@ web_bp = Blueprint("web", __name__, template_folder="templates")
 def index() -> str:
     """Home page with links to screenshot and PDF conversion tools."""
     return render_template("index.html")
+
+
+@web_bp.route("/coords", methods=["GET", "POST"])
+def coords_register() -> ResponseReturnValue:
+    """Coordinate registration page for web mode."""
+    message = ""
+    message_kind = "info"
+    coord_store = load_coord_store(COORD_JSON_PATH)
+    coord_names = list(coord_store["profiles"].keys())
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "default").strip() or "default"
+        capture_mode = (request.form.get("capture_mode") or "manual").strip()
+        timeout_raw = (request.form.get("timeout") or "20").strip()
+
+        labels = ["左上", "右下", "次ページボタン"]
+        points: list[tuple[int, int]]
+
+        try:
+            timeout = float(timeout_raw)
+            if timeout <= 0:
+                raise ValueError
+        except ValueError:
+            message = "待機秒数は 0 より大きい数値で入力してください。"
+            message_kind = "danger"
+            timeout = 20.0
+
+        if not message:
+            try:
+                if capture_mode == "click":
+                    points = PynputClickBackend(
+                        timeout_seconds=timeout
+                    ).collect(labels)
+                elif capture_mode == "manual":
+                    points = [
+                        (
+                            int(request.form["left_top_x"]),
+                            int(request.form["left_top_y"]),
+                        ),
+                        (
+                            int(request.form["right_bottom_x"]),
+                            int(request.form["right_bottom_y"]),
+                        ),
+                        (
+                            int(request.form["next_x"]),
+                            int(request.form["next_y"]),
+                        ),
+                    ]
+                else:
+                    return (
+                        "capture_mode は click か manual を指定してください。"
+                    )
+            except (KeyError, ValueError):
+                message = "manual ではすべての座標を整数で入力してください。"
+                message_kind = "danger"
+            except RuntimeError as exc:
+                message = str(exc)
+                message_kind = "danger"
+            else:
+                save_coord_profile(
+                    name=name,
+                    left_top=points[0],
+                    right_bottom=points[1],
+                    next_pos=points[2],
+                )
+                return redirect(url_for(".screenshot", coord_name=name))
+
+    return render_template(
+        "coords.html",
+        message=message,
+        message_kind=message_kind,
+        coord_names=coord_names,
+        coord_default=coord_store["default"],
+    )
 
 
 @web_bp.route("/screenshot", methods=["GET", "POST"])

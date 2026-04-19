@@ -10,6 +10,7 @@
 <body class="container py-4">
     <h1 class="mb-4">スクショ＆PDFツール</h1>
     <div class="list-group">
+        <a href="{{ url_for('web.coords_register') }}" class="list-group-item list-group-item-action">📍 座標を登録する</a>
         <a href="{{ url_for('web.screenshot') }}" class="list-group-item list-group-item-action">📸 スクリーンショット保存</a>
         <a href="{{ url_for('web.convert') }}" class="list-group-item list-group-item-action">🧾 PNG → PDF 変換</a>
     </div>
