@@ -15,16 +15,20 @@ uv sync --dev
 
 ## 使い方
 
-1. 座標を登録する
+`pshots` は `--web` か `--cli` のどちらかを必ず指定して実行します。
+引数なし実行はエラーになります。
+
+1. 座標を登録する（CLI モード）
 
 ```bash
-uv run python -m pshots.cli.create_box --name default
+uv run pshots --cli
 ```
 
-既定では `auto` モードで次の順に 3 点を取得します。
+`--cli` では追加引数を受け取らず、以下を対話式で決定します。
 
-- まず click 方式（左/右どちらのクリックでも可）
-- 失敗時は manual 方式へ自動フォールバック
+- 座標設定名
+- 座標取得方式（click/manual）
+- click 時の待機秒数
 
 取得順:
 
@@ -32,22 +36,18 @@ uv run python -m pshots.cli.create_box --name default
 - 右下
 - 次ページボタン
 
-必要に応じて方式を明示できます。
-
-```bash
-# click のみ（タイムアウト時は終了）
-uv run python -m pshots.cli.create_box --name default --mode click --timeout 20
-
-# 手入力のみ（OS 非依存）
-uv run python -m pshots.cli.create_box --name default --mode manual
-```
-
 保存先は `click_coords.json` です。
 
-2. アプリを起動する
+2. アプリを起動する（Web モード）
 
 ```bash
-uv run pshots
+uv run pshots --web
+```
+
+必要なら起動オプションを指定します。
+
+```bash
+uv run pshots --web --host 127.0.0.1 --port 5000 --debug
 ```
 
 ブラウザで以下を開きます。

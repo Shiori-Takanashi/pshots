@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import TypedDict
 
+from pshots.config.project_root import find_project_root
+
 
 class CoordProfile(TypedDict):
     """Single coordinate profile: capture area and button position."""
@@ -21,8 +23,9 @@ class CoordStore(TypedDict):
     profiles: dict[str, CoordProfile]
 
 
-COORD_JSON_PATH = Path("click_coords.json")
-LEGACY_COORD_TXT_PATH = Path("click_coords.txt")
+PROJECT_ROOT = find_project_root(Path(__file__))
+COORD_JSON_PATH = PROJECT_ROOT / "click_coords.json"
+LEGACY_COORD_TXT_PATH = PROJECT_ROOT / "click_coords.txt"
 
 
 def _load_legacy_txt(path: Path) -> CoordStore:

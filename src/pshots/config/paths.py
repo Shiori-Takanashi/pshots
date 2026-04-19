@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pshots.config.project_root import find_project_root
 
-cwd = Path.cwd()
+
+# Keep `cwd` for backward compatibility in existing modules.
+project_root = find_project_root(Path(__file__))
+cwd = project_root
 shelf_dir = cwd / "shelf"
 trash_dir = cwd / "trash"
 
