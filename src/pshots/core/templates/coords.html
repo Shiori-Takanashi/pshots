@@ -17,20 +17,22 @@
     <div class="alert alert-{{ message_kind }}">{{ message }}</div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" id="coordForm">
         <div class="mb-3">
             <label class="form-label">座標設定名</label>
-            <input type="text" name="name" class="form-control" value="default">
+            <input type="text" name="name" class="form-control" value="{{ selected_name or 'default' }}">
         </div>
 
         <div class="mb-3">
             <label class="form-label">登録方式</label>
-            <select name="capture_mode" class="form-select">
+            <select name="capture_mode" class="form-select" id="captureModeSelect">
                 <option value="manual" selected>manual</option>
                 <option value="click">click</option>
             </select>
-            <div class="form-text">click は pshots を起動している同じマシン上で実行してください。</div>
+            <div class="form-text">click は pshots を起動している同じマシン上で実行してください。開始後 60 秒以内に 3 点を右クリックします。</div>
         </div>
+
+        <div id="clickCountdownNotice" class="alert alert-warning d-none" role="status" aria-live="polite"></div>
 
         <div class="row g-2 mb-3">
             <div class="col-md-6">
@@ -65,13 +67,25 @@
             </div>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">click 時の待機秒数</label>
-            <input type="number" name="timeout" class="form-control" value="20" min="1" step="0.5">
-        </div>
-
-        <button type="submit" class="btn btn-primary">保存する</button>
+        <button type="submit" class="btn btn-primary" id="saveSubmitBtn">保存する</button>
+        <button type="button" class="btn btn-warning d-none" id="clickStartBtn">クリック取得を開始</button>
     </form>
+
+    <hr>
+    <h2 class="h5">選択中の座標</h2>
+    {% if selected_profile %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="mb-1"><strong>設定名:</strong> {{ selected_name }}</p>
+            <p class="mb-1"><strong>左上:</strong> ({{ selected_profile.bbox[0] }}, {{ selected_profile.bbox[1] }})</p>
+            <p class="mb-1"><strong>右下:</strong> ({{ selected_profile.bbox[2] }}, {{ selected_profile.bbox[3] }})</p>
+            <p class="mb-3"><strong>次ページ:</strong> ({{ selected_profile.next[0] }}, {{ selected_profile.next[1] }})</p>
+            <a class="btn btn-outline-primary" href="{{ url_for('web.screenshot', coord_name=selected_name) }}">この座標でスクリーンショットへ</a>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-muted">確認できる座標がまだありません。</p>
+    {% endif %}
 
     <hr>
     <h2 class="h5">現在の設定</h2>
@@ -91,6 +105,53 @@
     {% endif %}
 
     <a href="{{ url_for('web.index') }}">トップに戻る</a>
+
+    <script>
+        (() => {
+            const form = document.getElementById("coordForm");
+            const modeSelect = document.getElementById("captureModeSelect");
+            const saveSubmitBtn = document.getElementById("saveSubmitBtn");
+            const clickStartBtn = document.getElementById("clickStartBtn");
+            const notice = document.getElementById("clickCountdownNotice");
+
+            if (!form || !modeSelect || !saveSubmitBtn || !clickStartBtn || !notice) {
+                return;
+            }
+
+            const updateModeUI = () => {
+                const isClick = modeSelect.value === "click";
+                saveSubmitBtn.classList.toggle("d-none", isClick);
+                clickStartBtn.classList.toggle("d-none", !isClick);
+                if (!isClick) {
+                    notice.classList.add("d-none");
+                    notice.textContent = "";
+                }
+            };
+
+            modeSelect.addEventListener("change", updateModeUI);
+
+            clickStartBtn.addEventListener("click", () => {
+                let seconds = 3;
+                clickStartBtn.disabled = true;
+
+                notice.classList.remove("d-none");
+                notice.textContent = `クリック取得を ${seconds} 秒後に開始します。準備してください。`;
+
+                const timer = window.setInterval(() => {
+                    seconds -= 1;
+                    if (seconds > 0) {
+                        notice.textContent = `クリック取得を ${seconds} 秒後に開始します。準備してください。`;
+                        return;
+                    }
+                    window.clearInterval(timer);
+                    notice.textContent = "開始します。左上→右下→次ページボタンの順で右クリックしてください。";
+                    form.submit();
+                }, 1000);
+            });
+
+            updateModeUI();
+        })();
+    </script>
 </body>
 
 </html>

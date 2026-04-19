@@ -1,4 +1,4 @@
-# pshots
+u# pshots
 
 スクリーンショットを連続取得し、PNG を PDF に変換する Flask アプリです。
 

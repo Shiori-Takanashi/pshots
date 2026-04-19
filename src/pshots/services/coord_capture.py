@@ -32,9 +32,11 @@ class PynputClickBackend:
             raise RuntimeError("pynput を初期化できませんでした") from exc
 
         def on_click(
-            x: int, y: int, _button: object, pressed: bool
+            x: int, y: int, button: object, pressed: bool
         ) -> bool | None:
-            if not pressed:
+            from pynput.mouse import Button  # type: ignore[import-untyped]
+
+            if not pressed or button is not Button.right:
                 return None
 
             idx = len(points)

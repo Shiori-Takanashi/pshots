@@ -13,7 +13,7 @@ from mss import mss
 from natsort import natsorted
 from PIL import Image
 
-from pshots.config.paths import cwd, trash_dir
+from pshots.config.paths import pdfs_dir, pngs_dir, trash_dir
 from pshots.config.state import jobs
 
 
@@ -43,7 +43,7 @@ def capture_screenshots(
     try:
         jobs[job_id]["status"] = "開始前に待機中..."
         time.sleep(delay)
-        output_dir = cwd / folder
+        output_dir = pngs_dir / folder
         output_dir.mkdir(exist_ok=True)
         jobs[job_id]["status"] = "スクリーンショット撮影中..."
 
@@ -58,8 +58,10 @@ def capture_screenshots(
                 }
                 sct_img = sct.grab(monitor)
                 img = Image.frombytes("RGB", sct_img.size, sct_img.rgb)
+                w, h = img.size
+                img = img.resize((w * 2, h * 2), Image.LANCZOS)
                 path = output_dir / f"Page_{i + 1:03}.png"
-                img.save(path)
+                img.save(path, optimize=True, dpi=(300, 300))
                 jobs[job_id]["progress"] = f"{i + 1}/{pages} 枚保存済み"
                 pyautogui.click(coords["next_x"], coords["next_y"])
                 time.sleep(1)
@@ -88,9 +90,8 @@ def convert_to_pdf(job_id: str, target_dir: Path, save_dest: str) -> None:
             return
 
         jobs[job_id]["status"] = "PDF変換中..."
-        output_folder = cwd / save_dest
-        output_folder.mkdir(exist_ok=True)
-        pdf_path = output_folder / f"{target_dir.name}.pdf"
+        pdfs_dir.mkdir(exist_ok=True)
+        pdf_path = pdfs_dir / f"{target_dir.name}.pdf"
         with open(pdf_path, "wb") as f:
             f.write(img2pdf.convert([str(p) for p in pngs]))
 

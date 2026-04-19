@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import TypedDict
 
+from pshots.config.paths import json_dir
 from pshots.config.project_root import find_project_root
 
 
@@ -24,7 +25,7 @@ class CoordStore(TypedDict):
 
 
 PROJECT_ROOT = find_project_root(Path(__file__))
-COORD_JSON_PATH = PROJECT_ROOT / "click_coords.json"
+COORD_JSON_PATH = json_dir / "click_coords.json"
 LEGACY_COORD_TXT_PATH = PROJECT_ROOT / "click_coords.txt"
 
 
