@@ -1,13 +1,11 @@
-"""Screenshot and PDF conversion web application.
+"""スクリーンショット取得と PDF 変換の Web アプリケーション。
 
-Packages:
-  - core: Flask app factory and web routing
-  - services: Background tasks (screenshot capture, PDF conversion) and coordinate storage
-  - config: Global configuration (paths, job state)
-  - cli: Command-line tools (coordinate capture)
+パッケージ構成:
+    - web: Flask アプリ生成と Web ルーティング
+    - services: バックグラウンド処理（スクリーンショット取得、PDF 変換）と座標管理
+    - config: 共通設定（パス、ジョブ状態）
+    - cli: コマンドラインツール（座標取得）
 """
-
-from __future__ import annotations
 
 import argparse
 
@@ -16,7 +14,7 @@ __all__ = ["main"]
 
 
 def _run_web_mode(args: argparse.Namespace) -> None:
-    from pshots.core.app import create_app
+    from pshots.web.app import create_app
 
     app = create_app()
     app.run(host=args.host, port=args.port, debug=args.debug)
@@ -43,7 +41,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    """Entry point for pshots command-line tool."""
+    """pshots コマンドラインツールのエントリーポイント。"""
     from pshots.cli.interactive import run_cli_interactive
 
     parser = _build_parser()

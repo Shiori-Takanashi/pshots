@@ -1,6 +1,4 @@
-"""Coordinate profile storage and loading from JSON."""
-
-from __future__ import annotations
+"""座標プロファイルの JSON 保存と読み込み。"""
 
 import json
 from pathlib import Path
@@ -11,14 +9,14 @@ from pshots.config.project_root import find_project_root
 
 
 class CoordProfile(TypedDict):
-    """Single coordinate profile: capture area and button position."""
+    """単一の座標プロファイル: 取得範囲とボタン位置。"""
 
     bbox: list[int]
     next: list[int]
 
 
 class CoordStore(TypedDict):
-    """Complete coordinate storage with default and profiles."""
+    """既定値と複数プロファイルを持つ座標ストア。"""
 
     default: str
     profiles: dict[str, CoordProfile]
@@ -30,13 +28,13 @@ LEGACY_COORD_TXT_PATH = PROJECT_ROOT / "click_coords.txt"
 
 
 def _load_legacy_txt(path: Path) -> CoordStore:
-    """Load coordinate data from legacy TXT format.
+    """旧式 TXT 形式の座標データを読み込む。
 
-    Args:
-        path: Path to click_coords.txt file.
+    引数:
+        path: click_coords.txt ファイルのパス。
 
-    Returns:
-        CoordStore dictionary with migrated data.
+    戻り値:
+        移行済みデータを含む CoordStore 辞書。
     """
     if not path.exists():
         return {"default": "", "profiles": {}}
@@ -66,13 +64,13 @@ def _load_legacy_txt(path: Path) -> CoordStore:
 
 
 def load_coord_store(path: Path = COORD_JSON_PATH) -> CoordStore:
-    """Load coordinate store from JSON, with fallback to legacy TXT.
+    """JSON から座標ストアを読み込む。存在しない場合は旧式 TXT を使う。
 
-    Args:
-        path: Path to click_coords.json file.
+    引数:
+        path: click_coords.json ファイルのパス。
 
-    Returns:
-        CoordStore with default and named coordinate profiles.
+    戻り値:
+        既定値と名前付き座標プロファイルを含む CoordStore。
     """
     if not path.exists():
         legacy = _load_legacy_txt(LEGACY_COORD_TXT_PATH)
@@ -119,14 +117,14 @@ def save_coord_profile(
     next_pos: tuple[int, int],
     path: Path = COORD_JSON_PATH,
 ) -> None:
-    """Save a named coordinate profile to JSON storage.
+    """名前付き座標プロファイルを JSON ストレージへ保存する。
 
-    Args:
-        name: Profile name (identifier).
-        left_top: (x, y) coordinates of capture area top-left.
-        right_bottom: (x, y) coordinates of capture area bottom-right.
-        next_pos: (x, y) coordinates of page-advance button.
-        path: Path to click_coords.json file.
+    引数:
+        name: プロファイル名（識別子）。
+        left_top: 取得範囲左上の (x, y) 座標。
+        right_bottom: 取得範囲右下の (x, y) 座標。
+        next_pos: ページ送りボタンの (x, y) 座標。
+        path: click_coords.json ファイルのパス。
     """
     store = load_coord_store(path)
     store["profiles"][name] = {

@@ -1,6 +1,4 @@
-"""Interactive CLI flow for coordinate profile creation."""
-
-from __future__ import annotations
+"""座標プロファイル作成の対話型 CLI フロー。"""
 
 from pshots.cli.create_box import run_create_box
 
@@ -36,7 +34,7 @@ def _prompt_timeout(default: float = 20.0) -> float:
 
 
 def run_cli_interactive() -> None:
-    """Run create-box flow via interactive prompts."""
+    """対話入力を使って create-box フローを実行する。"""
     print("CLIモードを開始します。")
     print("実行コマンド: create-box")
 

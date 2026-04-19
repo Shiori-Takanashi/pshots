@@ -1,6 +1,4 @@
-"""Interactive tool to capture screen coordinates and save to JSON."""
-
-from __future__ import annotations
+"""画面座標を対話的に取得して JSON へ保存するツール。"""
 
 from pshots.services.coord_capture import ManualInputBackend, PynputClickBackend
 from pshots.services.coords import save_coord_profile
@@ -11,12 +9,12 @@ def run_create_box(
     capture_mode: str = "click",
     timeout: float = 20.0,
 ) -> None:
-    """Run interactive coordinate capture and save a profile.
+    """対話形式で座標を取得し、プロファイルとして保存する。
 
-    Args:
-        name: Profile name.
-        capture_mode: One of click/manual.
-        timeout: Timeout seconds for click mode.
+    引数:
+        name: プロファイル名。
+        capture_mode: 座標取得方式。`click` または `manual`。
+        timeout: `click` モードでのタイムアウト秒数。
     """
     labels = ["左上", "右下", "次ページボタン"]
 

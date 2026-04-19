@@ -1,25 +1,24 @@
-"""Coordinate capture backends with OS-agnostic fallback behavior."""
-
-from __future__ import annotations
+"""OS 差異を吸収するフォールバック付き座標取得バックエンド。"""
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol
+from importlib import import_module
+from typing import Any, Protocol
 
 
 Point = tuple[int, int]
 
 
 class CoordCaptureBackend(Protocol):
-    """Backend interface for collecting coordinates."""
+    """座標取得バックエンドのインターフェース。"""
 
     def collect(self, labels: list[str]) -> list[Point]:
-        """Collect points in label order."""
+        """ラベル順に座標点を収集する。"""
 
 
 @dataclass(slots=True)
 class PynputClickBackend:
-    """Collect points from mouse click events via pynput."""
+    """pynput のマウスクリックイベントで座標点を収集する。"""
 
     timeout_seconds: float = 20.0
 
@@ -27,16 +26,16 @@ class PynputClickBackend:
         points: list[Point] = []
 
         try:
-            from pynput.mouse import Listener  # type: ignore[import-untyped]
-        except Exception as exc:  # pragma: no cover
+            mouse_module: Any = import_module("pynput.mouse")
+            listener_class: Any = mouse_module.Listener
+            right_button: Any = mouse_module.Button.right
+        except Exception as exc:
             raise RuntimeError("pynput を初期化できませんでした") from exc
 
         def on_click(
             x: int, y: int, button: object, pressed: bool
         ) -> bool | None:
-            from pynput.mouse import Button  # type: ignore[import-untyped]
-
-            if not pressed or button is not Button.right:
+            if not pressed or button is not right_button:
                 return None
 
             idx = len(points)
@@ -47,7 +46,7 @@ class PynputClickBackend:
                 return False
             return None
 
-        with Listener(on_click=on_click) as listener:
+        with listener_class(on_click=on_click) as listener:
             listener.join(self.timeout_seconds)
             if len(points) < len(labels):
                 listener.stop()
@@ -58,7 +57,7 @@ class PynputClickBackend:
 
 @dataclass(slots=True)
 class ManualInputBackend:
-    """Collect points from terminal input."""
+    """ターミナル入力から座標点を収集する。"""
 
     input_func: Callable[[str], str] = input
 

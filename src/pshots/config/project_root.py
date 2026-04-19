@@ -1,6 +1,4 @@
-"""Project root discovery utilities."""
-
-from __future__ import annotations
+"""プロジェクトルート探索ユーティリティ。"""
 
 from pathlib import Path
 
@@ -9,15 +7,15 @@ MARKER_FILES = ("pyproject.toml", ".git")
 
 
 def find_project_root(start: Path | None = None) -> Path:
-    """Find project root by walking upward and checking marker files.
+    """マーカーファイルを基準に上位ディレクトリからルートを探索する。
 
-    Args:
-        start: Start path for upward search. If omitted, current working
-            directory is used.
+    引数:
+        start: 上方向探索の開始パス。省略時は現在の作業ディレクトリを
+            使用する。
 
-    Returns:
-        Detected project root path. Falls back to current working directory
-        when no marker file is found.
+    戻り値:
+        検出したプロジェクトルートのパス。マーカーファイルが見つからない
+        場合は現在の作業ディレクトリを返す。
     """
     current = (start or Path.cwd()).resolve()
     if current.is_file():

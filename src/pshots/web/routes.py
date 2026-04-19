@@ -1,9 +1,4 @@
-"""Web routes and request handlers for screenshot/PDF tools."""
-
-from __future__ import annotations
-
-import threading
-import uuid
+"""スクリーンショット/PDF ツール向けの Web ルート定義。"""
 
 from flask import (
     Blueprint,
@@ -18,45 +13,34 @@ from flask.typing import ResponseReturnValue
 
 from pshots.config.paths import pngs_dir
 from pshots.config.state import jobs
-from pshots.services.coord_capture import PynputClickBackend
 from pshots.services.coords import (
     COORD_JSON_PATH,
     load_coord_store,
     save_coord_profile,
 )
-from pshots.services.tasks import capture_screenshots, convert_to_pdf
+from pshots.web.operations import (
+    build_coord_message,
+    collect_click_or_manual_points,
+    normalize_folder_name,
+    profile_to_capture_coords,
+    start_capture_job,
+    start_convert_job,
+)
 
 
 web_bp = Blueprint("web", __name__, template_folder="templates")
 WEB_CLICK_TIMEOUT_SECONDS = 60.0
 
 
-def _normalize_folder_name(raw: str | None, default: str = "") -> str:
-    """Return a safe single-segment folder name.
-
-    Reject both '/' and '\\' so behavior does not differ by OS path rules.
-    """
-    value = (raw or default).strip() or default
-    if not value:
-        raise ValueError("フォルダ名を入力してください。")
-    if "/" in value or "\\" in value:
-        raise ValueError(
-            "フォルダ名に区切り文字（/ または \\）は使用できません。"
-        )
-    if value in {".", ".."}:
-        raise ValueError("フォルダ名が不正です。")
-    return value
-
-
 @web_bp.route("/")
 def index() -> str:
-    """Home page with links to screenshot and PDF conversion tools."""
+    """スクリーンショット機能と PDF 変換機能へのリンクを持つホーム画面。"""
     return render_template("index.html")
 
 
 @web_bp.route("/coords", methods=["GET", "POST"])
 def coords_register() -> ResponseReturnValue:
-    """Coordinate registration page for web mode."""
+    """Web モード向けの座標登録画面。"""
     message = ""
     message_kind = "info"
     coord_store = load_coord_store(COORD_JSON_PATH)
@@ -73,30 +57,22 @@ def coords_register() -> ResponseReturnValue:
         selected_name = name
         capture_mode = (request.form.get("capture_mode") or "manual").strip()
 
-        labels = ["左上", "右下", "次ページボタン"]
         points: list[tuple[int, int]]
 
         if not message:
             try:
                 if capture_mode == "click":
-                    points = PynputClickBackend(
-                        timeout_seconds=WEB_CLICK_TIMEOUT_SECONDS
-                    ).collect(labels)
+                    points = collect_click_or_manual_points(
+                        capture_mode=capture_mode,
+                        form=request.form,
+                        timeout_seconds=WEB_CLICK_TIMEOUT_SECONDS,
+                    )
                 elif capture_mode == "manual":
-                    points = [
-                        (
-                            int(request.form["left_top_x"]),
-                            int(request.form["left_top_y"]),
-                        ),
-                        (
-                            int(request.form["right_bottom_x"]),
-                            int(request.form["right_bottom_y"]),
-                        ),
-                        (
-                            int(request.form["next_x"]),
-                            int(request.form["next_y"]),
-                        ),
-                    ]
+                    points = collect_click_or_manual_points(
+                        capture_mode=capture_mode,
+                        form=request.form,
+                        timeout_seconds=WEB_CLICK_TIMEOUT_SECONDS,
+                    )
                 else:
                     return (
                         "capture_mode は click か manual を指定してください。"
@@ -140,7 +116,7 @@ def coords_register() -> ResponseReturnValue:
 
 @web_bp.route("/screenshot", methods=["GET", "POST"])
 def screenshot() -> ResponseReturnValue:
-    """Screenshot capture page: display form and process submissions."""
+    """スクリーンショット取得画面。入力フォーム表示と送信処理を行う。"""
     coord_file = COORD_JSON_PATH
     coords = None
     coord_msg = "click_coords.json が見つかりません。先に座標取得ツールを実行してください。"
@@ -155,18 +131,8 @@ def screenshot() -> ResponseReturnValue:
     if coord_names:
         profile = coord_store["profiles"].get(selected_coord_name)
         if profile:
-            left, top, right, bottom = profile["bbox"]
-            next_x, next_y = profile["next"]
-            coords = {
-                "bbox": (left, top, right, bottom),
-                "next_x": next_x,
-                "next_y": next_y,
-            }
-            coord_msg = (
-                f"設定名: {selected_coord_name}<br>"
-                f"範囲: 左上=({left},{top}), 右下=({right},{bottom})<br>"
-                f"次ページクリック位置: ({next_x},{next_y})"
-            )
+            coords = profile_to_capture_coords(profile)
+            coord_msg = build_coord_message(selected_coord_name, profile)
     elif coord_file.exists():
         coord_msg = (
             "click_coords.json の形式が不正です。座標を再登録してください。"
@@ -174,7 +140,7 @@ def screenshot() -> ResponseReturnValue:
 
     if request.method == "POST":
         try:
-            folder = _normalize_folder_name(
+            folder = normalize_folder_name(
                 request.form.get("folder"), default="myshots"
             )
         except ValueError as exc:
@@ -184,17 +150,12 @@ def screenshot() -> ResponseReturnValue:
         if not coords:
             return "click_coords.json が未設定です。先に座標取得してください。"
 
-        job_id = str(uuid.uuid4())
-        jobs[job_id] = {
-            "status": "ジョブ開始",
-            "progress": "",
-            "done": False,
-        }
-        t = threading.Thread(
-            target=capture_screenshots,
-            args=(job_id, folder, pages, delay, coords),
+        job_id = start_capture_job(
+            folder=folder,
+            pages=pages,
+            delay=delay,
+            coords=coords,
         )
-        t.start()
         return redirect(url_for(".job_status_page", job_id=job_id))
 
     return render_template(
@@ -207,7 +168,7 @@ def screenshot() -> ResponseReturnValue:
 
 @web_bp.route("/convert", methods=["GET", "POST"])
 def convert() -> ResponseReturnValue:
-    """PNG to PDF conversion page: display form and process submissions."""
+    """PNG から PDF への変換画面。入力フォーム表示と送信処理を行う。"""
     dirs = (
         [d for d in pngs_dir.iterdir() if d.is_dir()]
         if pngs_dir.exists()
@@ -220,7 +181,7 @@ def convert() -> ResponseReturnValue:
         if target_folder is None:
             return "変換対象フォルダが指定されていません。"
         try:
-            folder_name = _normalize_folder_name(target_folder)
+            folder_name = normalize_folder_name(target_folder)
         except ValueError as exc:
             return str(exc)
 
@@ -228,16 +189,10 @@ def convert() -> ResponseReturnValue:
         if not target_dir.exists() or not target_dir.is_dir():
             return "指定された変換対象のフォルダが存在しません。"
 
-        job_id = str(uuid.uuid4())
-        jobs[job_id] = {
-            "status": "ジョブ開始",
-            "progress": "",
-            "done": False,
-        }
-        t = threading.Thread(
-            target=convert_to_pdf, args=(job_id, target_dir, save_dest)
+        job_id = start_convert_job(
+            target_dir=target_dir,
+            save_dest=save_dest,
         )
-        t.start()
         return redirect(url_for(".job_status_page", job_id=job_id))
 
     folder_options = [d.name for d in dirs]
@@ -246,13 +201,13 @@ def convert() -> ResponseReturnValue:
 
 @web_bp.route("/job_status/<job_id>")
 def job_status_page(job_id: str) -> str:
-    """Job status monitoring page with live polling."""
+    """ポーリングで進捗を更新するジョブ状態監視画面。"""
     return render_template("job_status.html", job_id=job_id)
 
 
 @web_bp.route("/job_status/<job_id>/json")
 def job_status(job_id: str) -> ResponseReturnValue:
-    """JSON API endpoint for job status queries."""
+    """ジョブ状態照会用の JSON API エンドポイント。"""
     job = jobs.get(
         job_id, {"status": "不明なジョブID", "progress": "", "done": True}
     )
@@ -260,9 +215,9 @@ def job_status(job_id: str) -> ResponseReturnValue:
 
 
 def register_routes(app: Flask) -> None:
-    """Register routes by attaching the web blueprint.
+    """Web ブループリントを登録してルートを有効化する。
 
-    Args:
-        app: Flask application instance.
+    引数:
+        app: Flask アプリケーションインスタンス。
     """
     app.register_blueprint(web_bp)

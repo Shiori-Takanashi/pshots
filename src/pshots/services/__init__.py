@@ -1,4 +1,4 @@
-"""Services module: background tasks and coordinate management."""
+"""サービスモジュール: バックグラウンド処理と座標管理。"""
 
 from pshots.services.coord_capture import ManualInputBackend, PynputClickBackend
 from pshots.services.coords import load_coord_store, save_coord_profile

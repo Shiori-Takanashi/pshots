@@ -1,6 +1,3 @@
-"""Global application state for job tracking."""
-
-from __future__ import annotations
-
+"""ジョブ追跡のためのアプリケーション共有状態。"""
 
 jobs: dict[str, dict[str, object]] = {}

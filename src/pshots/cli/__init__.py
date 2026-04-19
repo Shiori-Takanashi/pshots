@@ -1,1 +1,1 @@
-"""CLI tools for coordinate capture."""
+"""座標取得用の CLI ツール。"""

@@ -1,13 +1,11 @@
-"""Path management and directory initialization."""
-
-from __future__ import annotations
+"""パス管理とディレクトリ初期化。"""
 
 from pathlib import Path
 
 from pshots.config.project_root import find_project_root
 
 
-# Keep `cwd` for backward compatibility in existing modules.
+# 既存モジュールとの後方互換性のため `cwd` を維持する。
 project_root = find_project_root(Path(__file__))
 cwd = project_root
 shelf_dir = cwd / "shelf"

@@ -1,20 +1,21 @@
-"""Background task execution for screenshot capture and PDF conversion."""
-
-from __future__ import annotations
+"""スクリーンショット取得と PDF 変換のバックグラウンド処理。"""
 
 import shutil
 import time
+from importlib import import_module
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
-import img2pdf  # type: ignore[import-untyped]
-import pyautogui  # type: ignore[import-untyped]
 from mss import mss
 from natsort import natsorted
 from PIL import Image
 
 from pshots.config.paths import pdfs_dir, pngs_dir, trash_dir
 from pshots.config.state import jobs
+
+
+img2pdf: Any = import_module("img2pdf")
+pyautogui: Any = import_module("pyautogui")
 
 
 class CaptureCoords(TypedDict):
@@ -30,15 +31,15 @@ def capture_screenshots(
     delay: int,
     coords: CaptureCoords,
 ) -> None:
-    """Capture sequential screenshots with mouse clicks between captures.
+    """マウスクリックを挟みながら連続してスクリーンショットを取得する。
 
-    Args:
-        job_id: Unique job identifier for status tracking.
-        folder: Output folder name for screenshots.
-        pages: Number of screenshots to capture.
-        delay: Initial delay before starting captures.
-        coords: Dictionary with 'bbox' (capture rectangle) and 'next_x'/'next_y'
-                (button coordinates to advance to next page).
+    引数:
+        job_id: 状態追跡に使うジョブ識別子。
+        folder: スクリーンショット保存先フォルダ名。
+        pages: 取得するスクリーンショット枚数。
+        delay: 取得開始前の待機秒数。
+        coords: 'bbox'（取得範囲）と 'next_x'/'next_y'（次ページボタン座標）
+            を含む辞書。
     """
     try:
         jobs[job_id]["status"] = "開始前に待機中..."
@@ -59,7 +60,7 @@ def capture_screenshots(
                 sct_img = sct.grab(monitor)
                 img = Image.frombytes("RGB", sct_img.size, sct_img.rgb)
                 w, h = img.size
-                img = img.resize((w * 2, h * 2), Image.LANCZOS)
+                img = img.resize((w * 2, h * 2), Image.Resampling.LANCZOS)
                 path = output_dir / f"Page_{i + 1:03}.png"
                 img.save(path, optimize=True, dpi=(300, 300))
                 jobs[job_id]["progress"] = f"{i + 1}/{pages} 枚保存済み"
@@ -74,12 +75,12 @@ def capture_screenshots(
 
 
 def convert_to_pdf(job_id: str, target_dir: Path, save_dest: str) -> None:
-    """Convert PNG images to PDF and archive source folder.
+    """PNG 画像群を PDF に変換し、元フォルダをアーカイブする。
 
-    Args:
-        job_id: Unique job identifier for status tracking.
-        target_dir: Directory containing PNG files to convert.
-        save_dest: Output folder name for generated PDF.
+    引数:
+        job_id: 状態追跡に使うジョブ識別子。
+        target_dir: 変換対象の PNG ファイルを含むディレクトリ。
+        save_dest: 生成した PDF の保存先種別。
     """
     try:
         jobs[job_id]["status"] = "PNGファイル検索中..."
